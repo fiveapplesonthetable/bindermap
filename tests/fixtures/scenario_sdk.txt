@@ -1,0 +1,1 @@
+android/app/PublicApi.publicEntry(Lcom/example/Helper;)V
