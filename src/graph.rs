@@ -93,6 +93,10 @@ impl Index {
         self.classes.get(owner).map(|c| c.jar.as_str()).unwrap_or("UNKNOWN")
     }
 
+    pub fn has_class(&self, owner: &str) -> bool {
+        self.classes.contains_key(owner)
+    }
+
     /// A method that is itself a public SDK method (signature present, and in a
     /// public namespace).
     pub fn is_public(&self, m: &MethodRef) -> bool {

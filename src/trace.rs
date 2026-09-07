@@ -117,12 +117,16 @@ pub fn trace(idx: &Index, start: &MethodRef, all_paths: bool) -> Trace {
                 queue.push_back(child);
             }
         }
-        // Bridge an inner class to its enclosing class (same method, no hop cost).
+        // Bridge an inner class to its enclosing class (same method, no hop cost),
+        // but only to a class that actually exists — so a synthetic name never
+        // spawns a dead node.
         if let Some(outer) = enclosing(&sig.owner) {
-            let outer_sig = MethodRef { owner: outer, name: sig.name.clone(), desc: sig.desc.clone() };
-            let child = arena.len();
-            arena.push(Node { sig: outer_sig, hops, parent: Some(ni) });
-            queue.push_back(child);
+            if idx.has_class(&outer) {
+                let outer_sig = MethodRef { owner: outer, name: sig.name.clone(), desc: sig.desc.clone() };
+                let child = arena.len();
+                arena.push(Node { sig: outer_sig, hops, parent: Some(ni) });
+                queue.push_back(child);
+            }
         }
     }
 
@@ -141,8 +145,13 @@ fn is_server_stub(owner: &str) -> bool {
     owner.ends_with("$Stub") || (owner.contains("$Stub$") && !owner.contains("$Stub$Proxy"))
 }
 
-/// The enclosing class of an inner class (`com/x/Outer$Inner` -> `com/x/Outer`).
+/// The enclosing class of an inner class. D8 synthetic classes use a `$$` marker
+/// (`com/x/Outer$$ExternalSyntheticLambda0`) whose enclosing type is the part
+/// before it; ordinary nesting (`com/x/Outer$Inner`) splits on the last `$`.
 fn enclosing(owner: &str) -> Option<String> {
+    if let Some((outer, _)) = owner.split_once("$$") {
+        return Some(outer.to_string());
+    }
     owner.rsplit_once('$').map(|(outer, _)| outer.to_string())
 }
 
@@ -181,5 +190,7 @@ mod tests {
     fn enclosing_class() {
         assert_eq!(enclosing("com/x/Outer$Inner").as_deref(), Some("com/x/Outer"));
         assert_eq!(enclosing("com/x/Outer"), None);
+        // D8 synthetic lambda: enclosing is the type before `$$`, not `com/x/Outer$`.
+        assert_eq!(enclosing("com/x/Outer$$ExternalSyntheticLambda0").as_deref(), Some("com/x/Outer"));
     }
 }
