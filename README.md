@@ -45,9 +45,12 @@ hierarchy, not guessed from names.
    the reverse graph. A method is a hit if it is itself in the public SDK, or if it
    overrides a public-API method. Server-side `$Stub` dispatch is skipped (its
    `onTransact` traces back through the binder runtime into generic hits); the client
-   `$Stub$Proxy` is not. Inner classes bridge to their enclosing class. Search is
-   bounded to 50 hops. Fast mode stops each branch at the first public hit;
-   `--all-paths` records every one.
+   `$Stub$Proxy` is not. Inner classes bridge to their enclosing class. A desugared
+   lambda / method reference — a synthetic class invoked through a functional
+   interface, with no direct callers — bridges to its construction site (via the
+   `ACC_SYNTHETIC` flag, not a name), so a closure that reaches binder is attributed
+   to the method that created it. Search is bounded to 50 hops. Fast mode stops each
+   branch at the first public hit; `--all-paths` records every one.
 5. **Report** (`report`). Serializes the deduped, sorted result to CSV and JSON. It
    holds no analysis state, so rendering stays decoupled.
 

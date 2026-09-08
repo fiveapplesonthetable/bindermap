@@ -97,6 +97,26 @@ impl Index {
         self.classes.contains_key(owner)
     }
 
+    pub fn is_synthetic(&self, owner: &str) -> bool {
+        self.classes.get(owner).is_some_and(|c| c.is_synthetic())
+    }
+
+    /// The methods that construct instances of `owner` — the callers of any of its
+    /// constructors. For a synthetic (lambda) class these are its creation sites.
+    pub fn constructor_callers(&self, owner: &str) -> Vec<MethodRef> {
+        let Some(c) = self.classes.get(owner) else { return Vec::new() };
+        let mut out = Vec::new();
+        for m in &c.methods {
+            if m.name == "<init>" {
+                let ctor = MethodRef { owner: owner.to_string(), name: "<init>".to_string(), desc: m.desc.clone() };
+                if let Some(callers) = self.reverse.get(&ctor) {
+                    out.extend(callers.iter().cloned());
+                }
+            }
+        }
+        out
+    }
+
     /// A method that is itself a public SDK method (signature present, and in a
     /// public namespace).
     pub fn is_public(&self, m: &MethodRef) -> bool {

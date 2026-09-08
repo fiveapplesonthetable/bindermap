@@ -128,6 +128,21 @@ pub fn trace(idx: &Index, start: &MethodRef, all_paths: bool) -> Trace {
                 queue.push_back(child);
             }
         }
+        // A synthetic class (a desugared lambda / method reference) runs on behalf
+        // of whoever created it, but is invoked through an interface, so it has no
+        // direct callers. Bridge to its construction sites, so a closure that
+        // reaches binder is attributed to the enclosing method. Flag-based (not
+        // name-based) and precise — a synthetic class has one create site per use.
+        if idx.is_synthetic(&sig.owner) {
+            for creator in idx.constructor_callers(&sig.owner) {
+                if is_server_stub(&creator.owner) {
+                    continue;
+                }
+                let child = arena.len();
+                arena.push(Node { sig: creator.clone(), hops: hops + 1, parent: Some(ni) });
+                queue.push_back(child);
+            }
+        }
     }
 
     let mapped = !mappings.is_empty();

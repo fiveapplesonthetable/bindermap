@@ -27,6 +27,11 @@ use std::process::Command;
 /// from its `$Stub` / `$Stub$Proxy` implementations.
 pub const ACC_INTERFACE: u32 = 0x0200;
 
+/// `ACC_SYNTHETIC` — compiler-generated. D8 marks desugared lambda / method-ref
+/// classes with it, so their execution can be attributed to the code that created
+/// them.
+pub const ACC_SYNTHETIC: u32 = 0x1000;
+
 /// A method reference in internal (slashed) form: `owner` = `com/foo/Bar`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MethodRef {
@@ -69,6 +74,9 @@ pub struct Class {
 impl Class {
     pub fn is_interface(&self) -> bool {
         self.access & ACC_INTERFACE != 0
+    }
+    pub fn is_synthetic(&self) -> bool {
+        self.access & ACC_SYNTHETIC != 0
     }
 }
 
